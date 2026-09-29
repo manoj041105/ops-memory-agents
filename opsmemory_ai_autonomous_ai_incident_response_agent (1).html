@@ -1,0 +1,979 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OpsMemory AI — Autonomous AI Incident Response Agent</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Google Fonts: Orbitron & Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Orbitron:wght@500;700;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        cyber: {
+                            black: '#030712',
+                            dark: '#0B0F19',
+                            card: 'rgba(15, 23, 42, 0.65)',
+                            cyan: '#00F0FF',
+                            blue: '#3B82F6',
+                            purple: '#A855F7',
+                            pink: '#EC4899',
+                            green: '#10B981',
+                            amber: '#F59E0B',
+                            red: '#EF4444'
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        tech: ['Orbitron', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace']
+                    },
+                    boxShadow: {
+                        'neon-cyan': '0 0 25px rgba(0, 240, 255, 0.35)',
+                        'neon-purple': '0 0 25px rgba(168, 85, 247, 0.35)',
+                        'glass': '0 8px 32px 0 rgba(0, 0, 0, 0.37)'
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body {
+            background-color: #030712;
+            color: #f3f4f6;
+            overflow-x: hidden;
+            font-family: 'Inter', sans-serif;
+        }
+
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #030712;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #1e293b;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #00F0FF;
+        }
+
+        /* Cyber grid lines background effect */
+        .cyber-grid {
+            background-size: 50px 50px;
+            background-image: 
+                linear-gradient(to right, rgba(0, 240, 255, 0.04) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(0, 240, 255, 0.04) 1px, transparent 1px);
+        }
+
+        /* Glassmorphism card */
+        .glass-panel {
+            background: rgba(11, 15, 25, 0.7);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(0, 240, 255, 0.15);
+        }
+
+        .glass-panel:hover {
+            border-color: rgba(0, 240, 255, 0.35);
+        }
+
+        /* Glowing texts */
+        .text-glow-cyan {
+            text-shadow: 0 0 12px rgba(0, 240, 255, 0.6);
+        }
+        .text-glow-purple {
+            text-shadow: 0 0 12px rgba(168, 85, 247, 0.6);
+        }
+
+        /* Radar scan effect */
+        @keyframes scan {
+            0% { transform: translateY(-100%); }
+            100% { transform: translateY(1000%); }
+        }
+        .animate-scan {
+            animation: scan 4s linear infinite;
+        }
+
+        /* Pulse glow animation */
+        @keyframes pulse-glow {
+            0%, 100% { opacity: 0.3; transform: scale(1); }
+            50% { opacity: 0.7; transform: scale(1.05); }
+        }
+        .pulse-glow {
+            animation: pulse-glow 6s ease-in-out infinite;
+        }
+    </style>
+</head>
+<body class="cyber-grid relative min-h-screen text-slate-100 selection:bg-cyan-500 selection:text-black">
+
+    <!-- Canvas background for particles -->
+    <canvas id="particleCanvas" class="fixed inset-0 pointer-events-none z-0 opacity-40"></canvas>
+
+    <!-- Top Ambient Glow Orbs -->
+    <div class="fixed -top-40 left-1/4 w-96 h-96 bg-cyan-500/20 rounded-full blur-[120px] pointer-events-none pulse-glow"></div>
+    <div class="fixed top-1/3 -right-40 w-96 h-96 bg-purple-600/20 rounded-full blur-[140px] pointer-events-none pulse-glow" style="animation-delay: 2s;"></div>
+
+    <!-- Navigation Bar -->
+    <header class="sticky top-0 z-50 glass-panel border-b border-slate-800/80 px-4 lg:px-8 py-3 transition-all duration-300">
+        <div class="max-w-7xl mx-auto flex items-center justify-between">
+            <a href="#" class="flex items-center gap-3 group">
+                <div class="relative w-10 h-10 rounded-xl bg-gradient-to-br from-cyan-500 via-blue-600 to-purple-600 p-[1px] shadow-neon-cyan">
+                    <div class="w-full h-full bg-cyber-black rounded-xl flex items-center justify-center group-hover:bg-transparent transition-all">
+                        <i data-lucide="cpu" class="w-5 h-5 text-cyan-400 group-hover:text-white transition-colors"></i>
+                    </div>
+                </div>
+                <div>
+                    <span class="font-tech text-xl font-bold tracking-wider bg-gradient-to-r from-cyan-400 via-blue-400 to-purple-400 bg-clip-text text-transparent">OpsMemory</span>
+                    <span class="text-xs font-mono px-2 py-0.5 ml-1 bg-cyan-500/10 text-cyan-400 border border-cyan-500/30 rounded-md">AI v2.4</span>
+                </div>
+            </a>
+
+            <!-- Desktop Nav Links -->
+            <nav class="hidden md:flex items-center gap-8 font-mono text-sm text-slate-300">
+                <a href="#simulator" class="hover:text-cyan-400 transition-colors flex items-center gap-1.5"><i data-lucide="terminal" class="w-4 h-4 text-cyan-400"></i> Interactive Demo</a>
+                <a href="#capabilities" class="hover:text-cyan-400 transition-colors">Capabilities</a>
+                <a href="#architecture" class="hover:text-cyan-400 transition-colors">Architecture</a>
+                <a href="#playbook" class="hover:text-cyan-400 transition-colors">Playbooks</a>
+                <a href="#metrics" class="hover:text-cyan-400 transition-colors">Performance</a>
+            </nav>
+
+            <!-- Actions -->
+            <div class="flex items-center gap-4">
+                <a href="https://manoj041105.github.io/OpsMemory-AI---Autonomous-AI-Incident-Response-Agent/" target="_blank" rel="noopener noreferrer" class="hidden sm:flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-900/80 hover:bg-slate-800 border border-slate-700 text-slate-200 text-sm font-medium transition-all hover:border-cyan-500/50">
+                    <i data-lucide="github" class="w-4 h-4"></i>
+                    <span>Repository</span>
+                </a>
+                <button onclick="scrollToSimulator()" class="relative group px-5 py-2.5 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 text-black font-semibold text-sm shadow-neon-cyan hover:shadow-cyan-500/50 transition-all duration-300 hover:scale-105">
+                    <span class="flex items-center gap-2 font-mono">
+                        <i data-lucide="zap" class="w-4 h-4"></i> Deploy Agent
+                    </span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <main class="relative z-10">
+        <!-- Hero Section -->
+        <section class="max-w-7xl mx-auto px-4 lg:px-8 pt-12 pb-20 lg:pt-20 lg:pb-28">
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
+                <!-- Hero Left Column -->
+                <div class="lg:col-span-7 space-y-6 text-left">
+                    <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 text-xs font-mono tracking-wide">
+                        <span class="w-2 h-2 rounded-full bg-cyan-400 animate-ping"></span>
+                        AUTONOMOUS INCIDENT RESPONSE AGENT
+                    </div>
+
+                    <h1 class="font-tech text-4xl sm:text-5xl lg:text-6xl font-extrabold text-white leading-tight">
+                        Self-Healing <span class="bg-gradient-to-r from-cyan-400 via-blue-400 to-purple-500 bg-clip-text text-transparent">Infrastructure</span> With Memory.
+                    </h1>
+
+                    <p class="text-lg text-slate-400 max-w-2xl leading-relaxed font-normal">
+                        Zero-downtime AI remediation powered by long-term vector memory & RAG reasoning. OpsMemory AI detects Kubernetes & Cloud outages, isolates root causes, and executes safe recovery playbooks in seconds.
+                    </p>
+
+                    <!-- CTA Buttons -->
+                    <div class="flex flex-wrap items-center gap-4 pt-2">
+                        <button onclick="scrollToSimulator()" class="px-6 py-3.5 rounded-xl bg-gradient-to-r from-cyan-500 via-blue-600 to-purple-600 text-white font-tech font-semibold text-sm shadow-neon-cyan hover:opacity-90 transition-all transform hover:-translate-y-0.5 flex items-center gap-2">
+                            <i data-lucide="play" class="w-4 h-4 fill-current"></i>
+                            Launch Live Console
+                        </button>
+                        <a href="https://manoj041105.github.io/OpsMemory-AI---Autonomous-AI-Incident-Response-Agent/" target="_blank" class="px-6 py-3.5 rounded-xl glass-panel text-slate-200 hover:text-white font-mono text-sm border border-slate-700/80 hover:border-cyan-500/50 transition-all flex items-center gap-2">
+                            <i data-lucide="book-open" class="w-4 h-4 text-cyan-400"></i>
+                            Documentation
+                        </a>
+                    </div>
+
+                    <!-- Trust / Compatibility Badges -->
+                    <div class="pt-8 border-t border-slate-800/80">
+                        <p class="text-xs font-mono text-slate-500 uppercase tracking-widest mb-3">Native Support & Integrations</p>
+                        <div class="flex flex-wrap items-center gap-6 text-slate-400 text-sm font-mono">
+                            <span class="flex items-center gap-2 hover:text-cyan-400 transition-colors"><i data-lucide="box" class="w-4 h-4 text-cyan-400"></i> Kubernetes (EKS/GKE/AKS)</span>
+                            <span class="flex items-center gap-2 hover:text-blue-400 transition-colors"><i data-lucide="cloud" class="w-4 h-4 text-blue-400"></i> AWS / GCP / Azure</span>
+                            <span class="flex items-center gap-2 hover:text-purple-400 transition-colors"><i data-lucide="activity" class="w-4 h-4 text-purple-400"></i> Datadog / Prometheus</span>
+                            <span class="flex items-center gap-2 hover:text-green-400 transition-colors"><i data-lucide="git-branch" class="w-4 h-4 text-green-400"></i> ArgoCD & Terraform</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Hero Right Column: Dynamic Telemetry & Live Monitor -->
+                <div class="lg:col-span-5">
+                    <div class="glass-panel rounded-2xl p-5 relative overflow-hidden shadow-2xl border border-cyan-500/20">
+                        <!-- Top status bar -->
+                        <div class="flex items-center justify-between pb-4 mb-4 border-b border-slate-800">
+                            <div class="flex items-center gap-2">
+                                <span class="w-3 h-3 rounded-full bg-emerald-500 animate-pulse"></span>
+                                <span class="font-mono text-xs font-semibold text-emerald-400 uppercase tracking-wider">OpsMemory Agent Active</span>
+                            </div>
+                            <span class="font-mono text-xs text-slate-500" id="heroClock">00:00:00 UTC</span>
+                        </div>
+
+                        <!-- Live Metrics grid -->
+                        <div class="grid grid-cols-2 gap-3 mb-4">
+                            <div class="bg-slate-900/80 rounded-xl p-3 border border-slate-800">
+                                <span class="text-xs font-mono text-slate-400">Cluster Health</span>
+                                <div class="text-xl font-tech text-cyan-400 mt-1 flex items-baseline justify-between">
+                                    <span>99.98%</span>
+                                    <i data-lucide="shield-check" class="w-4 h-4 text-cyan-400"></i>
+                                </div>
+                            </div>
+                            <div class="bg-slate-900/80 rounded-xl p-3 border border-slate-800">
+                                <span class="text-xs font-mono text-slate-400">Mean Time To Repair</span>
+                                <div class="text-xl font-tech text-purple-400 mt-1 flex items-baseline justify-between">
+                                    <span>4.2 sec</span>
+                                    <i data-lucide="zap" class="w-4 h-4 text-purple-400"></i>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Live Feed Widget -->
+                        <div class="bg-black/80 rounded-xl p-3 border border-slate-800 font-mono text-xs h-48 overflow-hidden relative">
+                            <div class="text-slate-500 pb-2 border-b border-slate-800/80 flex justify-between items-center">
+                                <span>TELEMETRY STREAM</span>
+                                <span class="text-[10px] text-cyan-400">RAG Memory Sync: 100%</span>
+                            </div>
+                            <div id="heroLogStream" class="mt-2 space-y-2 text-slate-300">
+                                <!-- Dynamic logs populated by JS -->
+                            </div>
+                        </div>
+
+                        <!-- Bottom AI Agent status card -->
+                        <div class="mt-4 p-3 rounded-xl bg-cyan-950/30 border border-cyan-500/20 flex items-center justify-between text-xs font-mono">
+                            <div class="flex items-center gap-2.5">
+                                <div class="w-8 h-8 rounded-lg bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center">
+                                    <i data-lucide="brain-circuit" class="w-4 h-4 text-cyan-400"></i>
+                                </div>
+                                <div>
+                                    <p class="text-slate-200 font-medium">Vector Memory Index</p>
+                                    <p class="text-slate-400 text-[10px]">14,290 Past Solutions Tokenized</p>
+                                </div>
+                            </div>
+                            <span class="text-cyan-400 text-[11px] font-semibold bg-cyan-500/10 px-2 py-1 rounded">READY</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Interactive Sandbox Simulator Section -->
+        <section id="simulator" class="max-w-7xl mx-auto px-4 lg:px-8 py-16 scroll-mt-20">
+            <div class="text-center max-w-3xl mx-auto mb-12">
+                <span class="text-cyan-400 font-mono text-xs font-semibold uppercase tracking-widest px-3 py-1 rounded-full bg-cyan-500/10 border border-cyan-500/20">Hands-on Sandbox</span>
+                <h2 class="font-tech text-3xl sm:text-4xl font-bold mt-3 text-white">Interactive AI Incident Simulator</h2>
+                <p class="text-slate-400 mt-2 font-mono text-sm">Simulate a real-world infrastructure failure and watch OpsMemory AI perform vector lookup, root-cause reasoning, and autonomous remediation in real-time.</p>
+            </div>
+
+            <!-- Simulator Main Console -->
+            <div class="glass-panel rounded-2xl overflow-hidden border border-slate-700/80 shadow-neon-cyan">
+                <!-- Header -->
+                <div class="bg-slate-900/90 px-6 py-4 border-b border-slate-800 flex flex-wrap items-center justify-between gap-4">
+                    <div class="flex items-center gap-3">
+                        <div class="flex gap-1.5">
+                            <span class="w-3 h-3 rounded-full bg-rose-500 inline-block"></span>
+                            <span class="w-3 h-3 rounded-full bg-amber-500 inline-block"></span>
+                            <span class="w-3 h-3 rounded-full bg-emerald-500 inline-block"></span>
+                        </div>
+                        <span class="font-mono text-xs text-slate-400 border-l border-slate-700 pl-3">opsmemory-cli --namespace=prod-us-east</span>
+                    </div>
+
+                    <div class="flex items-center gap-3 font-mono text-xs">
+                        <span class="text-slate-400">Human-In-The-Loop:</span>
+                        <button id="guardrailToggleBtn" onclick="toggleGuardrail()" class="px-2.5 py-1 rounded bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 hover:bg-emerald-500/30 transition-all">
+                            AUTONOMOUS (SAFE)
+                        </button>
+                    </div>
+                </div>
+
+                <div class="p-6 grid grid-cols-1 lg:grid-cols-12 gap-6">
+                    <!-- Left Control Panel: Incident Trigger Panel -->
+                    <div class="lg:col-span-4 space-y-4">
+                        <h3 class="font-mono text-xs uppercase tracking-wider text-slate-400 flex items-center gap-2">
+                            <i data-lucide="alert-triangle" class="w-4 h-4 text-amber-400"></i> Select Incident Scenario
+                        </h3>
+
+                        <div class="space-y-3">
+                            <button onclick="runIncident('oom')" class="incident-btn w-full text-left p-3.5 rounded-xl bg-slate-900/80 hover:bg-slate-800 border border-slate-800 hover:border-cyan-500/50 transition-all group">
+                                <div class="flex items-center justify-between">
+                                    <span class="font-mono text-sm font-semibold text-slate-200 group-hover:text-cyan-400">1. OOMKilled Pod Crash</span>
+                                    <span class="px-2 py-0.5 rounded text-[10px] font-mono bg-rose-500/20 text-rose-400 border border-rose-500/30">CRITICAL</span>
+                                </div>
+                                <p class="text-xs text-slate-400 mt-1 font-sans">Payment API memory leak causes pod termination in k8s cluster.</p>
+                            </button>
+
+                            <button onclick="runIncident('db')" class="incident-btn w-full text-left p-3.5 rounded-xl bg-slate-900/80 hover:bg-slate-800 border border-slate-800 hover:border-cyan-500/50 transition-all group">
+                                <div class="flex items-center justify-between">
+                                    <span class="font-mono text-sm font-semibold text-slate-200 group-hover:text-cyan-400">2. DB Connection Pool Leak</span>
+                                    <span class="px-2 py-0.5 rounded text-[10px] font-mono bg-amber-500/20 text-amber-400 border border-amber-500/30">HIGH</span>
+                                </div>
+                                <p class="text-xs text-slate-400 mt-1 font-sans">PostgreSQL pool connection exhaustion blocking checkout service.</p>
+                            </button>
+
+                            <button onclick="runIncident('latency')" class="incident-btn w-full text-left p-3.5 rounded-xl bg-slate-900/80 hover:bg-slate-800 border border-slate-800 hover:border-cyan-500/50 transition-all group">
+                                <div class="flex items-center justify-between">
+                                    <span class="font-mono text-sm font-semibold text-slate-200 group-hover:text-cyan-400">3. High Latency & Spike</span>
+                                    <span class="px-2 py-0.5 rounded text-[10px] font-mono bg-amber-500/20 text-amber-400 border border-amber-500/30">MEDIUM</span>
+                                </div>
+                                <p class="text-xs text-slate-400 mt-1 font-sans">Gateway service p99 latency spikes above 4500ms due to traffic burst.</p>
+                            </button>
+
+                            <button onclick="runIncident('bad_deploy')" class="incident-btn w-full text-left p-3.5 rounded-xl bg-slate-900/80 hover:bg-slate-800 border border-slate-800 hover:border-cyan-500/50 transition-all group">
+                                <div class="flex items-center justify-between">
+                                    <span class="font-mono text-sm font-semibold text-slate-200 group-hover:text-cyan-400">4. Broken Helm Deploy</span>
+                                    <span class="px-2 py-0.5 rounded text-[10px] font-mono bg-rose-500/20 text-rose-400 border border-rose-500/30">CRITICAL</span>
+                                </div>
+                                <p class="text-xs text-slate-400 mt-1 font-sans">Bad image tag injected into production ArgoCD deployment pipeline.</p>
+                            </button>
+                        </div>
+
+                        <!-- Reset Button -->
+                        <button onclick="resetConsole()" class="w-full py-2.5 rounded-xl border border-slate-700 bg-slate-900 hover:bg-slate-800 text-slate-300 font-mono text-xs flex items-center justify-center gap-2 transition-all">
+                            <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i> Clear Console & Reset
+                        </button>
+                    </div>
+
+                    <!-- Right Terminal Output & Live Step Execution -->
+                    <div class="lg:col-span-8 flex flex-col justify-between bg-black/90 rounded-xl p-4 border border-slate-800 font-mono text-xs min-h-[420px]">
+                        <!-- Pipeline Stepper Top Bar -->
+                        <div class="grid grid-cols-4 gap-2 mb-4 pb-3 border-b border-slate-800 text-center">
+                            <div id="step-1" class="step-card p-2 rounded bg-slate-900 border border-slate-800 transition-all">
+                                <p class="text-[10px] text-slate-500">STEP 1</p>
+                                <p class="font-semibold text-slate-300">1. Detect</p>
+                            </div>
+                            <div id="step-2" class="step-card p-2 rounded bg-slate-900 border border-slate-800 transition-all">
+                                <p class="text-[10px] text-slate-500">STEP 2</p>
+                                <p class="font-semibold text-slate-300">2. Vector Search</p>
+                            </div>
+                            <div id="step-3" class="step-card p-2 rounded bg-slate-900 border border-slate-800 transition-all">
+                                <p class="text-[10px] text-slate-500">STEP 3</p>
+                                <p class="font-semibold text-slate-300">3. LLM RCA</p>
+                            </div>
+                            <div id="step-4" class="step-card p-2 rounded bg-slate-900 border border-slate-800 transition-all">
+                                <p class="text-[10px] text-slate-500">STEP 4</p>
+                                <p class="font-semibold text-slate-300">4. Auto Fix</p>
+                            </div>
+                        </div>
+
+                        <!-- Terminal Terminal Log Stream -->
+                        <div id="terminalLog" class="flex-1 overflow-y-auto space-y-2 text-slate-300 pr-2 max-h-[260px]">
+                            <p class="text-slate-500">// OpsMemory AI Autonomous Response Core initialized.</p>
+                            <p class="text-slate-500">// Select a scenario on the left to trigger incident remediation...</p>
+                        </div>
+
+                        <!-- Terminal Bottom Status Bar -->
+                        <div class="mt-4 pt-3 border-t border-slate-800/80 flex items-center justify-between text-[11px]">
+                            <div class="flex items-center gap-2">
+                                <span id="simStatusBadge" class="w-2 h-2 rounded-full bg-slate-500"></span>
+                                <span id="simStatusText" class="text-slate-400">System Idle</span>
+                            </div>
+                            <div id="simTimer" class="text-cyan-400 font-semibold">0.00s</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Key Capabilities Section -->
+        <section id="capabilities" class="max-w-7xl mx-auto px-4 lg:px-8 py-16">
+            <div class="text-center max-w-3xl mx-auto mb-16">
+                <span class="text-purple-400 font-mono text-xs font-semibold uppercase tracking-widest px-3 py-1 rounded-full bg-purple-500/10 border border-purple-500/20">Next-Gen Ops Capabilities</span>
+                <h2 class="font-tech text-3xl sm:text-4xl font-bold mt-3 text-white">Engineered for Zero-Downtime Reliability</h2>
+                <p class="text-slate-400 mt-2 font-mono text-sm">Combining vector RAG memory with Kubernetes native controller logic to eliminate manual on-call fatigue.</p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                <!-- Feature 1 -->
+                <div class="glass-panel p-6 rounded-2xl border border-slate-800 hover:border-cyan-500/40 transition-all duration-300 group">
+                    <div class="w-12 h-12 rounded-xl bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-cyan-400 mb-5 group-hover:scale-110 transition-transform">
+                        <i data-lucide="database" class="w-6 h-6"></i>
+                    </div>
+                    <h3 class="font-tech text-lg font-semibold text-white mb-2">OpsMemory Vector Store</h3>
+                    <p class="text-slate-400 text-sm leading-relaxed">
+                        Long-term vector database memory indexing all past outages, infrastructure configurations, and successful fix playbooks for instant similarity search.
+                    </p>
+                </div>
+
+                <!-- Feature 2 -->
+                <div class="glass-panel p-6 rounded-2xl border border-slate-800 hover:border-purple-500/40 transition-all duration-300 group">
+                    <div class="w-12 h-12 rounded-xl bg-purple-500/10 border border-purple-500/30 flex items-center justify-center text-purple-400 mb-5 group-hover:scale-110 transition-transform">
+                        <i data-lucide="brain" class="w-6 h-6"></i>
+                    </div>
+                    <h3 class="font-tech text-lg font-semibold text-white mb-2">LLM Root Cause Analysis</h3>
+                    <p class="text-slate-400 text-sm leading-relaxed">
+                        Reasoning core correlates telemetry metrics, stack traces, and pod logs in real-time to pinpoint the exact line of code or infra change responsible.
+                    </p>
+                </div>
+
+                <!-- Feature 3 -->
+                <div class="glass-panel p-6 rounded-2xl border border-slate-800 hover:border-blue-500/40 transition-all duration-300 group">
+                    <div class="w-12 h-12 rounded-xl bg-blue-500/10 border border-blue-500/30 flex items-center justify-center text-blue-400 mb-5 group-hover:scale-110 transition-transform">
+                        <i data-lucide="shield-check" class="w-6 h-6"></i>
+                    </div>
+                    <h3 class="font-tech text-lg font-semibold text-white mb-2">Safe Guardrails & Overrides</h3>
+                    <p class="text-slate-400 text-sm leading-relaxed">
+                        Configurable safety rules prevent destructive actions. Choose between fully autonomous remediation or Human-in-the-loop Slack/Teams approval mode.
+                    </p>
+                </div>
+
+                <!-- Feature 4 -->
+                <div class="glass-panel p-6 rounded-2xl border border-slate-800 hover:border-emerald-500/40 transition-all duration-300 group">
+                    <div class="w-12 h-12 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400 mb-5 group-hover:scale-110 transition-transform">
+                        <i data-lucide="layers" class="w-6 h-6"></i>
+                    </div>
+                    <h3 class="font-tech text-lg font-semibold text-white mb-2">Kubernetes & Multi-Cloud Native</h3>
+                    <p class="text-slate-400 text-sm leading-relaxed">
+                        Deployable via Helm chart on EKS, GKE, AKS or bare metal. Works seamlessly alongside Prometheus, Grafana, and ArgoCD pipelines.
+                    </p>
+                </div>
+
+                <!-- Feature 5 -->
+                <div class="glass-panel p-6 rounded-2xl border border-slate-800 hover:border-amber-500/40 transition-all duration-300 group">
+                    <div class="w-12 h-12 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400 mb-5 group-hover:scale-110 transition-transform">
+                        <i data-lucide="refresh-cw" class="w-6 h-6"></i>
+                    </div>
+                    <h3 class="font-tech text-lg font-semibold text-white mb-2">Automated Rollbacks & Patching</h3>
+                    <p class="text-slate-400 text-sm leading-relaxed">
+                        Automatically scales deployments, restarts failing pods with patched limits, or triggers instant GitOps rollbacks without manual intervention.
+                    </p>
+                </div>
+
+                <!-- Feature 6 -->
+                <div class="glass-panel p-6 rounded-2xl border border-slate-800 hover:border-pink-500/40 transition-all duration-300 group">
+                    <div class="w-12 h-12 rounded-xl bg-pink-500/10 border border-pink-500/30 flex items-center justify-center text-pink-400 mb-5 group-hover:scale-110 transition-transform">
+                        <i data-lucide="file-text" class="w-6 h-6"></i>
+                    </div>
+                    <h3 class="font-tech text-lg font-semibold text-white mb-2">Auto-Generated Post-Mortems</h3>
+                    <p class="text-slate-400 text-sm leading-relaxed">
+                        Generates executive-ready post-incident reports with timeline graphs, vector embeddings match score, and recommendations for permanent fixes.
+                    </p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Architecture Workflow Section -->
+        <section id="architecture" class="max-w-7xl mx-auto px-4 lg:px-8 py-16">
+            <div class="text-center max-w-3xl mx-auto mb-16">
+                <span class="text-cyan-400 font-mono text-xs font-semibold uppercase tracking-widest px-3 py-1 rounded-full bg-cyan-500/10 border border-cyan-500/20">System Architecture</span>
+                <h2 class="font-tech text-3xl sm:text-4xl font-bold mt-3 text-white">How OpsMemory AI Operates</h2>
+                <p class="text-slate-400 mt-2 font-mono text-sm">Click on any stage in the pipeline below to inspect its underlying mechanism.</p>
+            </div>
+
+            <!-- Architecture Interactive Flow -->
+            <div class="glass-panel rounded-2xl p-6 lg:p-8 border border-slate-800">
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+                    <!-- Step 1 Card -->
+                    <button onclick="setArchStage(1)" id="arch-tab-1" class="arch-tab text-left p-4 rounded-xl bg-cyan-500/10 border-2 border-cyan-500 transition-all">
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="font-mono text-xs text-cyan-400 font-bold">01. INGEST</span>
+                            <i data-lucide="radio" class="w-4 h-4 text-cyan-400"></i>
+                        </div>
+                        <h4 class="font-tech text-sm font-semibold text-white">Telemetry & Alerts</h4>
+                        <p class="text-xs text-slate-400 mt-1">Prometheus, Kubernetes Events & CloudWatch.</p>
+                    </button>
+
+                    <!-- Step 2 Card -->
+                    <button onclick="setArchStage(2)" id="arch-tab-2" class="arch-tab text-left p-4 rounded-xl bg-slate-900/80 border border-slate-800 hover:border-slate-700 transition-all">
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="font-mono text-xs text-slate-500 font-bold">02. MEMORIZE</span>
+                            <i data-lucide="cpu" class="w-4 h-4 text-slate-500"></i>
+                        </div>
+                        <h4 class="font-tech text-sm font-semibold text-white">Vector Store RAG</h4>
+                        <p class="text-xs text-slate-400 mt-1">Embeddings match against incident history.</p>
+                    </button>
+
+                    <!-- Step 3 Card -->
+                    <button onclick="setArchStage(3)" id="arch-tab-3" class="arch-tab text-left p-4 rounded-xl bg-slate-900/80 border border-slate-800 hover:border-slate-700 transition-all">
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="font-mono text-xs text-slate-500 font-bold">03. REASON</span>
+                            <i data-lucide="sparkles" class="w-4 h-4 text-slate-500"></i>
+                        </div>
+                        <h4 class="font-tech text-sm font-semibold text-white">LLM Root Cause</h4>
+                        <p class="text-xs text-slate-400 mt-1">Contextual reasoning over logs & diffs.</p>
+                    </button>
+
+                    <!-- Step 4 Card -->
+                    <button onclick="setArchStage(4)" id="arch-tab-4" class="arch-tab text-left p-4 rounded-xl bg-slate-900/80 border border-slate-800 hover:border-slate-700 transition-all">
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="font-mono text-xs text-slate-500 font-bold">04. REMEDIATE</span>
+                            <i data-lucide="wrench" class="w-4 h-4 text-slate-500"></i>
+                        </div>
+                        <h4 class="font-tech text-sm font-semibold text-white">Safe Execution</h4>
+                        <p class="text-xs text-slate-400 mt-1">K8s API / GitOps playbook resolution.</p>
+                    </button>
+                </div>
+
+                <!-- Stage Detail Display Panel -->
+                <div id="archDetailContent" class="bg-slate-900/90 rounded-xl p-6 border border-slate-800 font-mono text-sm leading-relaxed">
+                    <!-- Populated dynamically by JS -->
+                </div>
+            </div>
+        </section>
+
+        <!-- Playbook Builder Interactive Preview -->
+        <section id="playbook" class="max-w-7xl mx-auto px-4 lg:px-8 py-16">
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+                <div class="lg:col-span-5 space-y-4">
+                    <span class="text-emerald-400 font-mono text-xs font-semibold uppercase tracking-widest px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20">Declarative Configuration</span>
+                    <h2 class="font-tech text-3xl font-bold text-white">Custom Remediation Playbook Builder</h2>
+                    <p class="text-slate-400 text-sm font-sans leading-relaxed">
+                        Define auto-remediation playbooks using clean YAML directives. Specify trigger thresholds, memory similarity match requirements, and guardrail limits.
+                    </p>
+
+                    <!-- Dynamic Controls for Playbook -->
+                    <div class="space-y-3 pt-2">
+                        <div>
+                            <label class="block text-xs font-mono text-slate-400 mb-1">Trigger Metric</label>
+                            <select id="playbookTrigger" onchange="updatePlaybookYaml()" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-2.5 text-xs font-mono text-slate-200 focus:border-cyan-500 outline-none">
+                                <option value="pod_memory_exceeded">container_memory_usage_bytes > 95%</option>
+                                <option value="http_5xx_spike">http_requests_5xx_rate > 10/s</option>
+                                <option value="db_connections_max">pg_stat_activity_count > 90%</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-mono text-slate-400 mb-1">Remediation Action</label>
+                            <select id="playbookAction" onchange="updatePlaybookYaml()" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-2.5 text-xs font-mono text-slate-200 focus:border-cyan-500 outline-none">
+                                <option value="scale_and_patch">Patch Resource Limits & Rolling Restart</option>
+                                <option value="kill_idle_connections">Flush Dead Pool & Scale Replicas</option>
+                                <option value="gitops_rollback">Trigger ArgoCD Auto-Rollback</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Code Editor Preview -->
+                <div class="lg:col-span-7">
+                    <div class="bg-slate-950 rounded-2xl border border-slate-800 overflow-hidden shadow-2xl">
+                        <div class="bg-slate-900 px-4 py-3 border-b border-slate-800 flex items-center justify-between">
+                            <span class="font-mono text-xs text-slate-400 flex items-center gap-2">
+                                <i data-lucide="file-code" class="w-4 h-4 text-cyan-400"></i> opsmemory-playbook.yaml
+                            </span>
+                            <button onclick="copyPlaybookYaml()" class="text-xs font-mono text-cyan-400 hover:text-cyan-300 flex items-center gap-1 bg-cyan-500/10 px-2.5 py-1 rounded border border-cyan-500/20">
+                                <i data-lucide="copy" class="w-3.5 h-3.5"></i> Copy YAML
+                            </button>
+                        </div>
+                        <pre class="p-6 font-mono text-xs text-slate-300 overflow-x-auto leading-relaxed" id="yamlCodeOutput">
+                        <!-- Populated by JS -->
+                        </pre>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Performance Metrics Section -->
+        <section id="metrics" class="max-w-7xl mx-auto px-4 lg:px-8 py-16 border-t border-b border-slate-800/60 my-12">
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
+                <div class="space-y-1">
+                    <div class="font-tech text-4xl lg:text-5xl font-extrabold text-cyan-400">99.4%</div>
+                    <p class="font-mono text-xs text-slate-400 uppercase tracking-wider">MTTR Reduction</p>
+                </div>
+                <div class="space-y-1">
+                    <div class="font-tech text-4xl lg:text-5xl font-extrabold text-purple-400">&lt; 8s</div>
+                    <p class="font-mono text-xs text-slate-400 uppercase tracking-wider">Avg Incident Resolution</p>
+                </div>
+                <div class="space-y-1">
+                    <div class="font-tech text-4xl lg:text-5xl font-extrabold text-emerald-400">0.0%</div>
+                    <p class="font-mono text-xs text-slate-400 uppercase tracking-wider">False Remediation Rate</p>
+                </div>
+                <div class="space-y-1">
+                    <div class="font-tech text-4xl lg:text-5xl font-extrabold text-blue-400">24/7</div>
+                    <p class="font-mono text-xs text-slate-400 uppercase tracking-wider">Autonomous Monitoring</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Bottom Call To Action Banner -->
+        <section class="max-w-7xl mx-auto px-4 lg:px-8 py-16">
+            <div class="glass-panel rounded-3xl p-8 sm:p-12 text-center relative overflow-hidden border border-cyan-500/30">
+                <div class="relative z-10 max-w-2xl mx-auto space-y-6">
+                    <h2 class="font-tech text-3xl sm:text-4xl font-bold text-white">Ready to automate your incident response?</h2>
+                    <p class="text-slate-300 font-normal text-sm sm:text-base">
+                        Deploy OpsMemory AI agent into your Kubernetes cluster in under 5 minutes with our Helm chart.
+                    </p>
+                    <div class="flex flex-wrap justify-center gap-4 pt-2">
+                        <a href="https://manoj041105.github.io/OpsMemory-AI---Autonomous-AI-Incident-Response-Agent/" target="_blank" class="px-8 py-4 rounded-xl bg-gradient-to-r from-cyan-500 via-blue-600 to-purple-600 text-white font-tech font-bold text-sm shadow-neon-cyan hover:opacity-90 transition-all">
+                            Visit Official Repository
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Futuristic Footer -->
+    <footer class="border-t border-slate-800 bg-cyber-black py-12 px-4 lg:px-8 relative z-10">
+        <div class="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-4 gap-8 mb-12">
+            <div class="space-y-4 md:col-span-2">
+                <div class="flex items-center gap-3">
+                    <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-cyan-500 to-purple-600 p-[1px]">
+                        <div class="w-full h-full bg-cyber-black rounded-lg flex items-center justify-center">
+                            <i data-lucide="cpu" class="w-4 h-4 text-cyan-400"></i>
+                        </div>
+                    </div>
+                    <span class="font-tech text-lg font-bold text-white">OpsMemory AI</span>
+                </div>
+                <p class="text-xs text-slate-400 font-sans max-w-sm">
+                    Autonomous AI agent for zero-downtime infrastructure incident response and predictive vector root-cause analysis.
+                </p>
+                <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-mono">
+                    <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                    ALL SYSTEMS OPERATIONAL
+                </div>
+            </div>
+
+            <div>
+                <h4 class="font-mono text-xs uppercase tracking-wider text-slate-200 font-semibold mb-4">Navigation</h4>
+                <ul class="space-y-2 text-xs font-mono text-slate-400">
+                    <li><a href="#simulator" class="hover:text-cyan-400 transition-colors">Interactive Demo</a></li>
+                    <li><a href="#capabilities" class="hover:text-cyan-400 transition-colors">Capabilities</a></li>
+                    <li><a href="#architecture" class="hover:text-cyan-400 transition-colors">Architecture</a></li>
+                    <li><a href="#playbook" class="hover:text-cyan-400 transition-colors">Playbook Builder</a></li>
+                </ul>
+            </div>
+
+            <div>
+                <h4 class="font-mono text-xs uppercase tracking-wider text-slate-200 font-semibold mb-4">Project Links</h4>
+                <ul class="space-y-2 text-xs font-mono text-slate-400">
+                    <li><a href="https://manoj041105.github.io/OpsMemory-AI---Autonomous-AI-Incident-Response-Agent/" target="_blank" class="hover:text-cyan-400 transition-colors flex items-center gap-1"><i data-lucide="external-link" class="w-3 h-3"></i> GitHub Repository</a></li>
+                    <li><a href="https://manoj041105.github.io/OpsMemory-AI---Autonomous-AI-Incident-Response-Agent/" target="_blank" class="hover:text-cyan-400 transition-colors flex items-center gap-1"><i data-lucide="file-text" class="w-3 h-3"></i> Helm Deployment Guide</a></li>
+                    <li><a href="https://manoj041105.github.io/OpsMemory-AI---Autonomous-AI-Incident-Response-Agent/" target="_blank" class="hover:text-cyan-400 transition-colors flex items-center gap-1"><i data-lucide="shield" class="w-3 h-3"></i> Security Guardrails</a></li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="max-w-7xl mx-auto pt-8 border-t border-slate-800/80 flex flex-wrap items-center justify-between gap-4 font-mono text-xs text-slate-500">
+            <p>© 2026 OpsMemory AI. Open-source incident response framework.</p>
+            <p>Built for SREs & DevOps Engineers</p>
+        </div>
+    </footer>
+
+    <!-- Notification Toast Container -->
+    <div id="toastContainer" class="fixed bottom-6 right-6 z-50 flex flex-col gap-2"></div>
+
+    <script>
+        // Initialize Lucide Icons
+        lucide.createIcons();
+
+        // Canvas Particle Effect Setup
+        const canvas = document.getElementById('particleCanvas');
+        const ctx = canvas.getContext('2d');
+        let particles = [];
+
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        class Particle {
+            constructor() {
+                this.x = Math.random() * canvas.width;
+                this.y = Math.random() * canvas.height;
+                this.size = Math.random() * 2 + 0.5;
+                this.speedX = (Math.random() - 0.5) * 0.5;
+                this.speedY = (Math.random() - 0.5) * 0.5;
+                this.color = Math.random() > 0.5 ? '#00F0FF' : '#A855F7';
+                this.alpha = Math.random() * 0.5 + 0.2;
+            }
+            update() {
+                this.x += this.speedX;
+                this.y += this.speedY;
+
+                if (this.x < 0) this.x = canvas.width;
+                if (this.x > canvas.width) this.x = 0;
+                if (this.y < 0) this.y = canvas.height;
+                if (this.y > canvas.height) this.y = 0;
+            }
+            draw() {
+                ctx.save();
+                ctx.globalAlpha = this.alpha;
+                ctx.fillStyle = this.color;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+            }
+        }
+
+        for (let i = 0; i < 60; i++) {
+            particles.push(new Particle());
+        }
+
+        function animateParticles() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            particles.forEach(p => {
+                p.update();
+                p.draw();
+            });
+            requestAnimationFrame(animateParticles);
+        }
+        animateParticles();
+
+        // UTC Clock
+        function updateClock() {
+            const now = new Date();
+            document.getElementById('heroClock').innerText = now.toUTCString().split(' ')[4] + ' UTC';
+        }
+        setInterval(updateClock, 1000);
+        updateClock();
+
+        // Hero Telemetry Dynamic Stream
+        const heroLogs = [
+            "[INFO] Vector Index query: similarity = 0.984",
+            "[METRIC] pod/payment-api memory = 88% (Normal)",
+            "[SYNC] Ingesting 1,200 log tokens/sec",
+            "[HEALTH] Kubernetes API server latency: 12ms",
+            "[RAG] 14,290 embeddings indexed in Chroma/Qdrant",
+            "[INFO] Auto-remediation engine standing by..."
+        ];
+
+        let logIdx = 0;
+        function updateHeroLogs() {
+            const container = document.getElementById('heroLogStream');
+            const logItem = document.createElement('div');
+            logItem.className = 'text-[11px] text-cyan-300 font-mono flex justify-between animate-fade-in';
+            logItem.innerHTML = `<span>${heroLogs[logIdx % heroLogs.length]}</span> <span class="text-slate-500">${new Date().toLocaleTimeString()}</span>`;
+            container.appendChild(logItem);
+            if (container.children.length > 5) {
+                container.removeChild(container.firstChild);
+            }
+            logIdx++;
+        }
+        setInterval(updateHeroLogs, 2500);
+
+        // Smooth Scroll Helper
+        function scrollToSimulator() {
+            document.getElementById('simulator').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        // Toggle Guardrail Mode
+        let isAutonomous = true;
+        function toggleGuardrail() {
+            isAutonomous = !isAutonomous;
+            const btn = document.getElementById('guardrailToggleBtn');
+            if (isAutonomous) {
+                btn.className = "px-2.5 py-1 rounded bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 hover:bg-emerald-500/30 transition-all";
+                btn.innerText = "AUTONOMOUS (SAFE)";
+                showToast("Autonomous Mode Active: Agent will execute fixes without human confirmation.");
+            } else {
+                btn.className = "px-2.5 py-1 rounded bg-amber-500/20 text-amber-400 border border-amber-500/40 hover:bg-amber-500/30 transition-all";
+                btn.innerText = "HUMAN-IN-THE-LOOP";
+                showToast("Human-in-the-Loop Active: Manual approval required before executing playbooks.");
+            }
+        }
+
+        // Toast Notification System
+        function showToast(msg) {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            toast.className = 'glass-panel p-3 px-4 rounded-xl text-xs font-mono text-cyan-300 border border-cyan-500/40 shadow-neon-cyan flex items-center gap-2 animate-bounce';
+            toast.innerHTML = `<i data-lucide="info" class="w-4 h-4 text-cyan-400"></i> ${msg}`;
+            container.appendChild(toast);
+            lucide.createIcons();
+            setTimeout(() => {
+                toast.remove();
+            }, 3500);
+        }
+
+        // Interactive Sandbox Incident Simulation Engine
+        let simInterval = null;
+        let simStartTime = 0;
+
+        const incidentsData = {
+            oom: [
+                { delay: 300, step: 1, text: "🚨 [ALERT DETECTED] Prometheus trigger: pod 'payment-service-89f4b' state = OOMKilled (Exit Code 137)", color: "text-rose-400" },
+                { delay: 1000, step: 2, text: "🔍 [VECTOR SEARCH] Querying OpsMemory Store for past 'Exit Code 137 payment-service'...", color: "text-purple-400" },
+                { delay: 1800, step: 2, text: "💡 [MEMORY MATCH] Found 3 similar historic incidents (Similarity Score: 0.962). Root cause previously matched heap memory limit under-allocation.", color: "text-cyan-400" },
+                { delay: 2600, step: 3, text: "🧠 [LLM RCA] Correlating pod metrics & Go runtime garbage collection logs. Diagnosis: Heap allocation burst exceeded 512Mi limit.", color: "text-amber-300" },
+                { delay: 3400, step: 4, text: "⚡ [PLAYBOOK EXECUTION] Applying Patch: Requesting +512Mi memory limit boost & triggering rolling update...", color: "text-emerald-400" },
+                { delay: 4200, step: 4, text: "✅ [RESOLVED] Pod 'payment-service-89f4b' healthy & receiving traffic. Total resolution time: 3.8s", color: "text-emerald-300 font-bold" }
+            ],
+            db: [
+                { delay: 300, step: 1, text: "🚨 [ALERT DETECTED] Postgres client error: 'FATAL: remaining connection slots reserved for non-replication superuser connections'", color: "text-rose-400" },
+                { delay: 1000, step: 2, text: "🔍 [VECTOR SEARCH] Searching vector memory for 'pg_stat_activity leak pool exhausted'...", color: "text-purple-400" },
+                { delay: 1800, step: 2, text: "💡 [MEMORY MATCH] Matched past incident #8421: Idle unclosed transactions from checkout API.", color: "text-cyan-400" },
+                { delay: 2600, step: 3, text: "🧠 [LLM RCA] Root cause confirmed: Zombie idle-in-transaction connections from node-service pods.", color: "text-amber-300" },
+                { delay: 3400, step: 4, text: "⚡ [PLAYBOOK EXECUTION] Executing safe pg_terminate_backend on idle connections > 30s & restarting PgBouncer...", color: "text-emerald-400" },
+                { delay: 4200, step: 4, text: "✅ [RESOLVED] DB active connections reduced from 100% to 22%. API fully functional.", color: "text-emerald-300 font-bold" }
+            ],
+            latency: [
+                { delay: 300, step: 1, text: "🚨 [ALERT DETECTED] High Latency Spike: gateway-ingress p99 latency = 4,850ms (Threshold: 500ms)", color: "text-rose-400" },
+                { delay: 1000, step: 2, text: "🔍 [VECTOR SEARCH] Querying Vector Store for traffic burst patterns...", color: "text-purple-400" },
+                { delay: 1800, step: 2, text: "💡 [MEMORY MATCH] Matched flash sale traffic surge pattern (Match Confidence: 94%).", color: "text-cyan-400" },
+                { delay: 2600, step: 3, text: "🧠 [LLM RCA] Analysis: CPU utilization on gateway pods at 98%. Pods under-provisioned for current traffic.", color: "text-amber-300" },
+                { delay: 3400, step: 4, text: "⚡ [PLAYBOOK EXECUTION] Triggering HPA scale-up: Expanding replica count from 3 -> 12 pods...", color: "text-emerald-400" },
+                { delay: 4200, step: 4, text: "✅ [RESOLVED] p99 latency restored to 84ms. Traffic distributed safely.", color: "text-emerald-300 font-bold" }
+            ],
+            bad_deploy: [
+                { delay: 300, step: 1, text: "🚨 [ALERT DETECTED] Deployment Failed: 'auth-service:v2.4.1' CrashLoopBackOff on 4 replicas", color: "text-rose-400" },
+                { delay: 1000, step: 2, text: "🔍 [VECTOR SEARCH] Indexing git commit diffs & container image logs...", color: "text-purple-400" },
+                { delay: 1800, step: 2, text: "💡 [MEMORY MATCH] Similar deployment regression found in sprint 42 release logs.", color: "text-cyan-400" },
+                { delay: 2600, step: 3, text: "🧠 [LLM RCA] Missing ENV variable 'JWT_SECRET_KEY' in new Helm chart values payload.", color: "text-amber-300" },
+                { delay: 3400, step: 4, text: "⚡ [PLAYBOOK EXECUTION] Triggering ArgoCD GitOps automatic rollback to stable commit 'v2.4.0'...", color: "text-emerald-400" },
+                { delay: 4200, step: 4, text: "✅ [RESOLVED] ArgoCD rollback successful. Auth service restored to 100% health.", color: "text-emerald-300 font-bold" }
+            ]
+        };
+
+        function resetConsole() {
+            clearInterval(simInterval);
+            document.getElementById('terminalLog').innerHTML = `
+                <p class="text-slate-500">// OpsMemory AI Autonomous Response Core initialized.</p>
+                <p class="text-slate-500">// Select a scenario on the left to trigger incident remediation...</p>
+            `;
+            document.getElementById('simStatusBadge').className = 'w-2 h-2 rounded-full bg-slate-500';
+            document.getElementById('simStatusText').innerText = 'System Idle';
+            document.getElementById('simTimer').innerText = '0.00s';
+
+            for (let i = 1; i <= 4; i++) {
+                const stepEl = document.getElementById(`step-${i}`);
+                stepEl.className = 'step-card p-2 rounded bg-slate-900 border border-slate-800 transition-all';
+            }
+        }
+
+        function runIncident(type) {
+            resetConsole();
+            const logs = incidentsData[type];
+            if (!logs) return;
+
+            const terminal = document.getElementById('terminalLog');
+            terminal.innerHTML = '';
+
+            document.getElementById('simStatusBadge').className = 'w-2 h-2 rounded-full bg-rose-500 animate-ping';
+            document.getElementById('simStatusText').innerText = 'Incident Active — Remediation In Progress';
+
+            simStartTime = Date.now();
+            simInterval = setInterval(() => {
+                const elapsed = ((Date.now() - simStartTime) / 1000).toFixed(2);
+                document.getElementById('simTimer').innerText = `${elapsed}s`;
+            }, 50);
+
+            logs.forEach(log => {
+                setTimeout(() => {
+                    // Log line
+                    const line = document.createElement('div');
+                    line.className = `font-mono text-xs ${log.color} animate-fade-in flex items-start gap-2`;
+                    line.innerHTML = `<span class="text-slate-600 font-normal">[${new Date().toLocaleTimeString()}]</span> <span>${log.text}</span>`;
+                    terminal.appendChild(line);
+                    terminal.scrollTop = terminal.scrollHeight;
+
+                    // Update Stepper
+                    for (let i = 1; i <= 4; i++) {
+                        const stepEl = document.getElementById(`step-${i}`);
+                        if (i === log.step) {
+                            stepEl.className = 'step-card p-2 rounded bg-cyan-500/20 border-2 border-cyan-400 shadow-neon-cyan transition-all';
+                        } else if (i < log.step) {
+                            stepEl.className = 'step-card p-2 rounded bg-emerald-500/10 border border-emerald-500/40 text-emerald-400 transition-all';
+                        }
+                    }
+
+                    // On completion
+                    if (log.step === 4 && log.text.includes('RESOLVED')) {
+                        clearInterval(simInterval);
+                        document.getElementById('simStatusBadge').className = 'w-2 h-2 rounded-full bg-emerald-400';
+                        document.getElementById('simStatusText').innerText = 'Incident Auto-Resolved';
+                    }
+                }, log.delay);
+            });
+        }
+
+        // Architecture Workflow Switcher
+        const archDetails = {
+            1: {
+                title: "01. Ingestion & Multi-Source Observability",
+                content: `OpsMemory AI continuously hooks into Kubernetes API Events, Prometheus Alertmanager, Datadog webhooks, and CloudWatch streams. When a metric breaches safe thresholds, telemetry metrics, full log buffers, and environment metadata are ingested instantly into the agent context pipeline.`
+            },
+            2: {
+                title: "02. OpsMemory Vector RAG Retrieval",
+                content: `The incident payload is transformed into high-dimensional vector embeddings and queried against the local/cloud OpsMemory Vector Store (ChromaDB / Qdrant). It performs Cosine Similarity lookup across thousands of past incident post-mortems and resolutions to find matching patterns in &lt;15ms.`
+            },
+            3: {
+                title: "03. Multi-Modal LLM Root Cause Reasoning",
+                content: `The LLM reasoning core combines the real-time stack traces, container diffs, and matched vector memory context. It constructs a step-by-step diagnostic chain to pinpoint whether the root cause is a code bug, memory leak, network partition, or misconfigured deployment parameter.`
+            },
+            4: {
+                title: "04. Autonomous Guardrail Execution & GitOps",
+                content: `After determining the fix, OpsMemory validates the plan against defined Safety Guardrails. In Autonomous Mode, it triggers Kubernetes API mutations (scaling, limit patching, restarts) or ArgoCD GitOps commits automatically. Post-mortem reports are dispatched to Slack/Teams.`
+            }
+        };
+
+        function setArchStage(stage) {
+            for (let i = 1; i <= 4; i++) {
+                const tab = document.getElementById(`arch-tab-${i}`);
+                if (i === stage) {
+                    tab.className = 'arch-tab text-left p-4 rounded-xl bg-cyan-500/10 border-2 border-cyan-500 transition-all';
+                } else {
+                    tab.className = 'arch-tab text-left p-4 rounded-xl bg-slate-900/80 border border-slate-800 hover:border-slate-700 transition-all';
+                }
+            }
+
+            const details = archDetails[stage];
+            document.getElementById('archDetailContent').innerHTML = `
+                <h3 class="text-cyan-400 font-tech font-bold text-base mb-2">${details.title}</h3>
+                <p class="text-slate-300 font-sans text-sm">${details.content}</p>
+            `;
+        }
+        setArchStage(1);
+
+        // Playbook Builder Yaml Generator
+        function updatePlaybookYaml() {
+            const trigger = document.getElementById('playbookTrigger').value;
+            const action = document.getElementById('playbookAction').value;
+
+            const yaml = `apiVersion: opsmemory.ai/v1alpha1
+kind: IncidentPlaybook
+metadata:
+  name: auto-remediate-${trigger}
+  namespace: opsmemory-system
+spec:
+  trigger:
+    metricQuery: "${trigger}"
+    thresholdDuration: "15s"
+    severity: "CRITICAL"
+
+  memorySearch:
+    vectorStore: "opsmemory-cluster-db"
+    minSimilarityMatch: 0.88
+    maxHistoricMatches: 5
+
+  reasoningEngine:
+    model: "claude-3-5-sonnet"
+    enableLogContext: true
+
+  guardrails:
+    requireHumanApproval: ${!isAutonomous}
+    maxAutoRestartsPerHour: 3
+    allowedActions:
+      - "k8s:patch_resources"
+      - "k8s:rollout_restart"
+      - "gitops:argocd_sync"
+
+  action:
+    type: "${action}"
+    targetSelector:
+      app.kubernetes.io/managed-by: "Helm"
+`;
+            document.getElementById('yamlCodeOutput').textContent = yaml;
+        }
+        updatePlaybookYaml();
+
+        function copyPlaybookYaml() {
+            const code = document.getElementById('yamlCodeOutput').textContent;
+            navigator.clipboard.writeText(code).then(() => {
+                showToast("Playbook YAML copied to clipboard!");
+            });
+        }
+    </script>
+</body>
+</html>
